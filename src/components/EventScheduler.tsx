@@ -76,6 +76,20 @@ const EventScheduler: React.FC = () => {
     }
   };
 
+  const handleUpdateEvent = async (id: string, eventData: Partial<Event>) => {
+    try {
+      const updatedEvent = await eventApi.updateEvent(id, eventData);
+      setEvents((prev) =>
+        prev.map((event) =>
+          event._id === id || event.id === id ? updatedEvent : event
+        )
+      );
+    } catch (err) {
+      setError("Failed to update event");
+      console.error("Error updating event:", err);
+    }
+  };
+
   const handleArchiveEvent = async (id: string) => {
     try {
       const updatedEvent = await eventApi.archiveEvent(id);
@@ -167,6 +181,7 @@ const EventScheduler: React.FC = () => {
               events={events}
               onArchive={handleArchiveEvent}
               onDelete={handleDeleteEvent}
+              onUpdate={handleUpdateEvent}
             />
           </div>
         </div>

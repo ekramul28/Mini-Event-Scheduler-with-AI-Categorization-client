@@ -6,16 +6,20 @@ interface EventListProps {
   events: Event[];
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
+  onUpdate?: (id: string, eventData: Partial<Event>) => void;
 }
 
 const EventList: React.FC<EventListProps> = ({
   events,
   onArchive,
   onDelete,
+  onUpdate,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<Event>>({});
 
   console.log("EventList received events:", events);
   console.log("Events length:", events.length);
@@ -23,7 +27,8 @@ const EventList: React.FC<EventListProps> = ({
 
   // Filter and search events
   const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
+    return events.filter((events) => {
+      const event = events.data;
       // Search term filter
       const matchesSearch =
         searchTerm === "" ||
@@ -41,6 +46,34 @@ const EventList: React.FC<EventListProps> = ({
       return matchesSearch && matchesCategory && matchesArchived;
     });
   }, [events, searchTerm, categoryFilter, showArchived]);
+
+  const handleEditClick = (event: Event) => {
+    setEditingEvent(event._id || event.id || "");
+    setEditFormData({
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      notes: event.notes,
+      category: event.category,
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (editingEvent && onUpdate) {
+      try {
+        await onUpdate(editingEvent, editFormData);
+        setEditingEvent(null);
+        setEditFormData({});
+      } catch (error) {
+        console.error("Error updating event:", error);
+      }
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingEvent(null);
+    setEditFormData({});
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -100,6 +133,35 @@ const EventList: React.FC<EventListProps> = ({
         );
     }
   };
+
+  // Show "No events yet" message when there are no events at all
+  if (events.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-8 text-center">
+        <div className="text-gray-400 mb-4">
+          <svg
+            className="mx-auto h-12 w-12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          No events yet
+        </h3>
+        <p className="text-gray-500">
+          Create your first event using the form on the left.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -224,9 +286,9 @@ const EventList: React.FC<EventListProps> = ({
       {/* Events List */}
       <div className="space-y-4">
         {filteredEvents.map((events) => {
-          const event = events?.data;
+          const event = events.data;
           console.log("Event data:", event);
-          // Check for both _id and id properties
+          // Use _id as the primary identifier, fallback to id if _id doesn't exist
           const eventId = event._id || event.id;
           if (!event || !eventId) {
             console.log("Skipping event - missing id:", event);
@@ -234,6 +296,8 @@ const EventList: React.FC<EventListProps> = ({
           }
           // Ensure eventId is a string
           const safeEventId = eventId as string;
+          const isEditing = editingEvent === safeEventId;
+
           return (
             <div
               key={safeEventId}
@@ -245,36 +309,229 @@ const EventList: React.FC<EventListProps> = ({
                   : "border-blue-500"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3
-                      className={`text-lg font-semibold text-gray-900 ${
-                        event.archived ? "line-through" : ""
-                      } ${
-                        !event.archived && isPast(event.date, event.time)
-                          ? "text-red-600"
-                          : ""
+              {isEditing ? (
+                // Edit Form
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.title || ""}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            title: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        maxLength={100}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <select
+                        value={editFormData.category || ""}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            category: e.target.value as any,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="Work">Work</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.date || ""}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            date: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Time <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={editFormData.time || ""}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            time: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      value={editFormData.notes || ""}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          notes: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      maxLength={500}
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleEditSave}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleEditCancel}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Display Mode
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3
+                        className={`text-lg font-semibold text-gray-900 ${
+                          event.archived ? "line-through" : ""
+                        } ${
+                          !event.archived && isPast(event.date, event.time)
+                            ? "text-red-600"
+                            : ""
+                        }`}
+                      >
+                        {event.title}
+                      </h3>
+                      {event.archived && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Archived
+                        </span>
+                      )}
+                      {!event.archived && isPast(event.date, event.time) && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Past Event
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                      <div className="flex items-center space-x-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span>{formatDate(event.date)}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span>{formatTime(event.time)}</span>
+                      </div>
+                    </div>
+
+                    {event.notes && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
+                          {event.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
+                          event.category
+                        )}`}
+                      >
+                        {getCategoryIcon(event.category)}
+                        <span className="ml-1">{event.category}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 ml-4">
+                    {onUpdate && (
+                      <button
+                        onClick={() => handleEditClick(event)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                        title="Edit event"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onArchive(safeEventId)}
+                      className={`p-2 rounded-md transition-colors duration-200 ${
+                        event.archived
+                          ? "text-green-600 hover:bg-green-50"
+                          : "text-gray-600 hover:bg-gray-50"
                       }`}
+                      title={
+                        event.archived ? "Unarchive event" : "Archive event"
+                      }
                     >
-                      {event.title}
-                    </h3>
-                    {event.archived && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Archived
-                      </span>
-                    )}
-                    {!event.archived && isPast(event.date, event.time) && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Past Event
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center space-x-1">
                       <svg
-                        className="w-4 h-4"
+                        className="w-5 h-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -283,14 +540,17 @@ const EventList: React.FC<EventListProps> = ({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                         />
                       </svg>
-                      <span>{formatDate(event.date)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
+                    </button>
+                    <button
+                      onClick={() => onDelete(safeEventId)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+                      title="Delete event"
+                    >
                       <svg
-                        className="w-4 h-4"
+                        className="w-5 h-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -299,78 +559,13 @@ const EventList: React.FC<EventListProps> = ({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
-                      <span>{formatTime(event.time)}</span>
-                    </div>
-                  </div>
-
-                  {event.notes && (
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
-                        {event.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
-                        event.category
-                      )}`}
-                    >
-                      {getCategoryIcon(event.category)}
-                      <span className="ml-1">{event.category}</span>
-                    </span>
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() => onArchive(safeEventId)}
-                    className={`p-2 rounded-md transition-colors duration-200 ${
-                      event.archived
-                        ? "text-green-600 hover:bg-green-50"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                    title={event.archived ? "Unarchive event" : "Archive event"}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => onDelete(safeEventId)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
-                    title="Delete event"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           );
         })}
