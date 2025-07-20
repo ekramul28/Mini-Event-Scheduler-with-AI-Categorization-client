@@ -1,6 +1,6 @@
 import React from "react";
 import type { Event } from "../types/event";
-import { format, parseISO, isValid } from "date-fns";
+import { formatDate, formatTime, isPast } from "../utils/dateUtils";
 
 interface EventListProps {
   events: Event[];
@@ -13,38 +13,6 @@ const EventList: React.FC<EventListProps> = ({
   onArchive,
   onDelete,
 }) => {
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) return "Invalid Date";
-      return format(date, "EEE, MMM d, yyyy");
-    } catch {
-      return "Invalid Date";
-    }
-  };
-
-  const formatTime = (timeString: string | undefined) => {
-    if (!timeString) return "N/A";
-    try {
-      // Create a date object with today's date and the time string
-      const today = new Date();
-      const [hours, minutes] = timeString.split(":");
-      const dateWithTime = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        parseInt(hours, 10),
-        parseInt(minutes, 10)
-      );
-
-      if (!isValid(dateWithTime)) return "Invalid Time";
-      return format(dateWithTime, "h:mm a");
-    } catch {
-      return "Invalid Time";
-    }
-  };
-
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "Work":
@@ -152,6 +120,8 @@ const EventList: React.FC<EventListProps> = ({
               className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
                 event.archived
                   ? "border-gray-300 opacity-75"
+                  : isPast(event.date, event.time)
+                  ? "border-red-500 opacity-90"
                   : "border-blue-500"
               }`}
             >
@@ -161,6 +131,10 @@ const EventList: React.FC<EventListProps> = ({
                     <h3
                       className={`text-lg font-semibold text-gray-900 ${
                         event.archived ? "line-through" : ""
+                      } ${
+                        !event.archived && isPast(event.date, event.time)
+                          ? "text-red-600"
+                          : ""
                       }`}
                     >
                       {event.title}
@@ -168,6 +142,11 @@ const EventList: React.FC<EventListProps> = ({
                     {event.archived && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         Archived
+                      </span>
+                    )}
+                    {!event.archived && isPast(event.date, event.time) && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Past Event
                       </span>
                     )}
                   </div>
