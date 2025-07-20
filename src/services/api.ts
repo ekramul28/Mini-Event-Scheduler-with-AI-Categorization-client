@@ -1,6 +1,7 @@
 import type { Event, CreateEventData, UpdateEventData } from "../types/event";
 
-const API_BASE_URL = "http://localhost:5000/api/v1";
+// const API_BASE_URL = "http://localhost:5000/api/v1";
+const API_BASE_URL = "https://mini-event-with-ai.vercel.app/api/v1";
 
 export const eventApi = {
   // Get all events
