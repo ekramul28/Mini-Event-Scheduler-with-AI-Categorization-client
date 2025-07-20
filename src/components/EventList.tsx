@@ -1,5 +1,6 @@
 import React from "react";
 import type { Event } from "../types/event";
+import { format, parseISO, isValid } from "date-fns";
 
 interface EventListProps {
   events: Event[];
@@ -15,13 +16,9 @@ const EventList: React.FC<EventListProps> = ({
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "N/A";
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        weekday: "short",
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      const date = parseISO(dateString);
+      if (!isValid(date)) return "Invalid Date";
+      return format(date, "EEE, MMM d, yyyy");
     } catch {
       return "Invalid Date";
     }
@@ -29,11 +26,23 @@ const EventList: React.FC<EventListProps> = ({
 
   const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "N/A";
-    const [hours, minutes] = timeString.split(":");
-    const hour = parseInt(hours, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
+    try {
+      // Create a date object with today's date and the time string
+      const today = new Date();
+      const [hours, minutes] = timeString.split(":");
+      const dateWithTime = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        parseInt(hours, 10),
+        parseInt(minutes, 10)
+      );
+
+      if (!isValid(dateWithTime)) return "Invalid Time";
+      return format(dateWithTime, "h:mm a");
+    } catch {
+      return "Invalid Time";
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -133,34 +142,103 @@ const EventList: React.FC<EventListProps> = ({
       </div>
 
       <div className="space-y-4">
-        {events.map((event) => (
-          <div
-            key={event._id}
-            className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
-              event.archived ? "border-gray-300 opacity-75" : "border-blue-500"
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h3
-                    className={`text-lg font-semibold text-gray-900 ${
-                      event.archived ? "line-through" : ""
-                    }`}
-                  >
-                    {event.title}
-                  </h3>
-                  {event.archived && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Archived
-                    </span>
+        {events.map((event) => {
+          if (!event || !event._id) {
+            return null;
+          }
+          return (
+            <div
+              key={event._id}
+              className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
+                event.archived
+                  ? "border-gray-300 opacity-75"
+                  : "border-blue-500"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <h3
+                      className={`text-lg font-semibold text-gray-900 ${
+                        event.archived ? "line-through" : ""
+                      }`}
+                    >
+                      {event.title}
+                    </h3>
+                    {event.archived && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Archived
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                    <div className="flex items-center space-x-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>{formatDate(event.date)}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>{formatTime(event.time)}</span>
+                    </div>
+                  </div>
+
+                  {event.notes && (
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
+                        {event.notes}
+                      </p>
+                    </div>
                   )}
+
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
+                        event.category
+                      )}`}
+                    >
+                      {getCategoryIcon(event.category)}
+                      <span className="ml-1">{event.category}</span>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                  <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={() => onArchive(event._id)}
+                    className={`p-2 rounded-md transition-colors duration-200 ${
+                      event.archived
+                        ? "text-green-600 hover:bg-green-50"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    title={event.archived ? "Unarchive event" : "Archive event"}
+                  >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -169,14 +247,17 @@ const EventList: React.FC<EventListProps> = ({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                       />
                     </svg>
-                    <span>{formatDate(event.date)}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
+                  </button>
+                  <button
+                    onClick={() => onDelete(event._id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+                    title="Delete event"
+                  >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -185,80 +266,15 @@ const EventList: React.FC<EventListProps> = ({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
-                    <span>{formatTime(event.time)}</span>
-                  </div>
+                  </button>
                 </div>
-
-                {event.notes && (
-                  <div className="mb-3">
-                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
-                      {event.notes}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
-                      event.category
-                    )}`}
-                  >
-                    {getCategoryIcon(event.category)}
-                    <span className="ml-1">{event.category}</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 ml-4">
-                <button
-                  onClick={() => onArchive(event._id)}
-                  className={`p-2 rounded-md transition-colors duration-200 ${
-                    event.archived
-                      ? "text-green-600 hover:bg-green-50"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                  title={event.archived ? "Unarchive event" : "Archive event"}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onDelete(event._id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
-                  title="Delete event"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

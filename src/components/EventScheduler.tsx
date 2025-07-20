@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Event, CreateEventData } from "../types/event";
 import { eventApi } from "../services/api";
+import { parseISO, isValid } from "date-fns";
 
 import EventList from "./EventList";
 import EventForm from "./EventForm";
@@ -21,9 +22,18 @@ const EventScheduler: React.FC = () => {
       const fetchedEvents = await eventApi.getAllEvents();
       // Sort events by date and time (ascending)
       const sortedEvents = fetchedEvents.sort((a, b) => {
-        const dateA = new Date(`${a.date || ""}T${a.time || ""}`);
-        const dateB = new Date(`${b.date || ""}T${b.time || ""}`);
-        return dateA.getTime() - dateB.getTime();
+        try {
+          const dateA = parseISO(`${a.date || ""}T${a.time || ""}`);
+          const dateB = parseISO(`${b.date || ""}T${b.time || ""}`);
+
+          if (!isValid(dateA) || !isValid(dateB)) {
+            return 0; // Keep original order if dates are invalid
+          }
+
+          return dateA.getTime() - dateB.getTime();
+        } catch {
+          return 0; // Keep original order if parsing fails
+        }
       });
       setEvents(sortedEvents);
       setError(null);
@@ -40,9 +50,18 @@ const EventScheduler: React.FC = () => {
       const newEvent = await eventApi.createEvent(eventData);
       setEvents((prev) =>
         [...prev, newEvent].sort((a, b) => {
-          const dateA = new Date(`${a.date || ""}T${a.time || ""}`);
-          const dateB = new Date(`${b.date || ""}T${b.time || ""}`);
-          return dateA.getTime() - dateB.getTime();
+          try {
+            const dateA = parseISO(`${a.date || ""}T${a.time || ""}`);
+            const dateB = parseISO(`${b.date || ""}T${b.time || ""}`);
+
+            if (!isValid(dateA) || !isValid(dateB)) {
+              return 0; // Keep original order if dates are invalid
+            }
+
+            return dateA.getTime() - dateB.getTime();
+          } catch {
+            return 0; // Keep original order if parsing fails
+          }
         })
       );
     } catch (err) {
