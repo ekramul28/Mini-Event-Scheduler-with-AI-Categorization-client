@@ -10,7 +10,7 @@ const EventScheduler: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  console.log(events);
   // Fetch events on component mount
   useEffect(() => {
     fetchEvents();
@@ -20,6 +20,8 @@ const EventScheduler: React.FC = () => {
     try {
       setLoading(true);
       const fetchedEvents = await eventApi.getAllEvents();
+      console.log("Fetched events from API:", fetchedEvents);
+      console.log("First event structure:", fetchedEvents[0]);
       // Sort events by date and time (ascending)
       const sortedEvents = fetchedEvents.sort((a, b) => {
         try {
@@ -74,7 +76,9 @@ const EventScheduler: React.FC = () => {
     try {
       const updatedEvent = await eventApi.archiveEvent(id);
       setEvents((prev) =>
-        prev.map((event) => (event._id === id ? updatedEvent : event))
+        prev.map((event) =>
+          event._id === id || event.id === id ? updatedEvent : event
+        )
       );
     } catch (err) {
       setError("Failed to archive event");
@@ -85,7 +89,9 @@ const EventScheduler: React.FC = () => {
   const handleDeleteEvent = async (id: string) => {
     try {
       await eventApi.deleteEvent(id);
-      setEvents((prev) => prev.filter((event) => event._id !== id));
+      setEvents((prev) =>
+        prev.filter((event) => event._id !== id && event.id !== id)
+      );
     } catch (err) {
       setError("Failed to delete event");
       console.error("Error deleting event:", err);

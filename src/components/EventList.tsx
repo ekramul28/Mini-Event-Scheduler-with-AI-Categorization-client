@@ -13,6 +13,9 @@ const EventList: React.FC<EventListProps> = ({
   onArchive,
   onDelete,
 }) => {
+  console.log("EventList received events:", events);
+  console.log("Events length:", events.length);
+  console.log("First event:", events[0]);
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "Work":
@@ -111,16 +114,22 @@ const EventList: React.FC<EventListProps> = ({
 
       <div className="space-y-4">
         {events.map((event) => {
-          if (!event || !event._id) {
+          console.log("Event data:", event);
+          // Check for both _id and id properties
+          const eventId = event.data._id || event.data.id;
+          if (!event || !eventId) {
+            console.log("Skipping event - missing id:", event);
             return null;
           }
+          // Ensure eventId is a string
+          const safeEventId = eventId as string;
           return (
             <div
-              key={event._id}
+              key={safeEventId}
               className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
-                event.archived
+                event.data.archived
                   ? "border-gray-300 opacity-75"
-                  : isPast(event.date, event.time)
+                  : isPast(event.data.date, event.data.time)
                   ? "border-red-500 opacity-90"
                   : "border-blue-500"
               }`}
@@ -130,25 +139,27 @@ const EventList: React.FC<EventListProps> = ({
                   <div className="flex items-center space-x-3 mb-2">
                     <h3
                       className={`text-lg font-semibold text-gray-900 ${
-                        event.archived ? "line-through" : ""
+                        event.data.archived ? "line-through" : ""
                       } ${
-                        !event.archived && isPast(event.date, event.time)
+                        !event.data.archived &&
+                        isPast(event.data.date, event.data.time)
                           ? "text-red-600"
                           : ""
                       }`}
                     >
-                      {event.title}
+                      {event.data.title}
                     </h3>
-                    {event.archived && (
+                    {event.data.archived && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         Archived
                       </span>
                     )}
-                    {!event.archived && isPast(event.date, event.time) && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Past Event
-                      </span>
-                    )}
+                    {!event.data.archived &&
+                      isPast(event.data.date, event.data.time) && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Past Event
+                        </span>
+                      )}
                   </div>
 
                   <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
@@ -166,7 +177,7 @@ const EventList: React.FC<EventListProps> = ({
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      <span>{formatDate(event.date)}</span>
+                      <span>{formatDate(event.data.date)}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <svg
@@ -182,14 +193,14 @@ const EventList: React.FC<EventListProps> = ({
                           d="12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>{formatTime(event.time)}</span>
+                      <span>{formatTime(event.data.time)}</span>
                     </div>
                   </div>
 
-                  {event.notes && (
+                  {event.data.notes && (
                     <div className="mb-3">
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
-                        {event.notes}
+                        {event.data.notes}
                       </p>
                     </div>
                   )}
@@ -197,20 +208,20 @@ const EventList: React.FC<EventListProps> = ({
                   <div className="flex items-center space-x-2">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
-                        event.category
+                        event.data.category
                       )}`}
                     >
-                      {getCategoryIcon(event.category)}
-                      <span className="ml-1">{event.category}</span>
+                      {getCategoryIcon(event.data.category)}
+                      <span className="ml-1">{event.data.category}</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 ml-4">
                   <button
-                    onClick={() => onArchive(event._id)}
+                    onClick={() => onArchive(safeEventId)}
                     className={`p-2 rounded-md transition-colors duration-200 ${
-                      event.archived
+                      event.data.archived
                         ? "text-green-600 hover:bg-green-50"
                         : "text-gray-600 hover:bg-gray-50"
                     }`}
@@ -231,7 +242,7 @@ const EventList: React.FC<EventListProps> = ({
                     </svg>
                   </button>
                   <button
-                    onClick={() => onDelete(event._id)}
+                    onClick={() => onDelete(safeEventId)}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
                     title="Delete event"
                   >
