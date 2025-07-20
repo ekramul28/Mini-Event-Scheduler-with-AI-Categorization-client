@@ -1,11 +1,12 @@
 import { createBrowserRouter } from "react-router-dom";
 import React from "react";
-import App from "../App";
+import EventScheduler from "../components/EventScheduler";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,
+    element: <EventScheduler />,
   },
 ]);
+
 export default router;
