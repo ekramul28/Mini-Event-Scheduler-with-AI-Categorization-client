@@ -3,14 +3,28 @@ import type { CreateEventData } from "../types/event";
 
 interface EventFormProps {
   onSubmit: (eventData: CreateEventData) => void;
+  onDelete?: (id: string) => void;
+  eventToEdit?: {
+    id: string;
+    title: string;
+    date: string;
+    time: string;
+    notes?: string;
+  } | null;
+  isEditing?: boolean;
 }
 
-const EventForm: React.FC<EventFormProps> = ({ onSubmit }) => {
+const EventForm: React.FC<EventFormProps> = ({
+  onSubmit,
+  onDelete,
+  eventToEdit,
+  isEditing = false,
+}) => {
   const [formData, setFormData] = useState<CreateEventData>({
-    title: "",
-    date: "",
-    time: "",
-    notes: "",
+    title: eventToEdit?.title || "",
+    date: eventToEdit?.date || "",
+    time: eventToEdit?.time || "",
+    notes: eventToEdit?.notes || "",
   });
   const [errors, setErrors] = useState<Partial<CreateEventData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,18 +64,36 @@ const EventForm: React.FC<EventFormProps> = ({ onSubmit }) => {
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      // Reset form after successful submission
-      setFormData({
-        title: "",
-        date: "",
-        time: "",
-        notes: "",
-      });
-      setErrors({});
+      // Reset form after successful submission (only if not editing)
+      if (!isEditing) {
+        setFormData({
+          title: "",
+          date: "",
+          time: "",
+          notes: "",
+        });
+        setErrors({});
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (eventToEdit && onDelete) {
+      if (
+        window.confirm(
+          "Are you sure you want to delete this event? This action cannot be undone."
+        )
+      ) {
+        try {
+          await onDelete(eventToEdit.id);
+        } catch (error) {
+          console.error("Error deleting event:", error);
+        }
+      }
     }
   };
 
@@ -193,21 +225,48 @@ const EventForm: React.FC<EventFormProps> = ({ onSubmit }) => {
         </div>
       </div>
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-      >
-        {isSubmitting ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Creating Event...
-          </div>
-        ) : (
-          "Create Event"
+      {/* Action Buttons */}
+      <div className="flex space-x-2">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {isEditing ? "Updating Event..." : "Creating Event..."}
+            </div>
+          ) : isEditing ? (
+            "Update Event"
+          ) : (
+            "Create Event"
+          )}
+        </button>
+
+        {isEditing && eventToEdit && onDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
+            title="Delete event"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
         )}
-      </button>
+      </div>
     </form>
   );
 };

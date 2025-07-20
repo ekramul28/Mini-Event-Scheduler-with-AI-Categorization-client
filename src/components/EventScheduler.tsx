@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import type { Event, CreateEventData } from "../types/event";
 import { eventApi } from "../services/api";
 import { parseISO, isValid } from "date-fns";
@@ -44,7 +45,7 @@ const EventScheduler: React.FC = () => {
       setEvents(sortedEvents);
       setError(null);
     } catch (err) {
-      setError("Failed to fetch events");
+      // setError("Failed to fetch events");
       console.error("Error fetching events:", err);
     } finally {
       setLoading(false);
@@ -77,12 +78,15 @@ const EventScheduler: React.FC = () => {
   };
 
   const handleUpdateEvent = async (id: string, eventData: Partial<Event>) => {
+    console.log(id);
     try {
       const updatedEvent = await eventApi.updateEvent(id, eventData);
+      console.log("update", updatedEvent);
       setEvents((prev) =>
-        prev.map((event) =>
-          event._id === id || event.id === id ? updatedEvent : event
-        )
+        prev.map((events) => {
+          const event = events.data;
+          return event._id === id || event.id === id ? updatedEvent : event;
+        })
       );
     } catch (err) {
       setError("Failed to update event");
@@ -94,9 +98,10 @@ const EventScheduler: React.FC = () => {
     try {
       const updatedEvent = await eventApi.archiveEvent(id);
       setEvents((prev) =>
-        prev.map((event) =>
-          event._id === id || event.id === id ? updatedEvent : event
-        )
+        prev.map((events) => {
+          const event = events.data;
+          return event._id === id || event.id === id ? updatedEvent : event;
+        })
       );
     } catch (err) {
       setError("Failed to archive event");
@@ -108,7 +113,10 @@ const EventScheduler: React.FC = () => {
     try {
       await eventApi.deleteEvent(id);
       setEvents((prev) =>
-        prev.filter((event) => event._id !== id && event.id !== id)
+        prev.filter((events) => {
+          const event = events.data;
+          return event._id !== id && event.id !== id;
+        })
       );
     } catch (err) {
       setError("Failed to delete event");
@@ -135,9 +143,49 @@ const EventScheduler: React.FC = () => {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Event Scheduler
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 mb-4">
             Organize your events with ease
           </p>
+          <div className="flex justify-center space-x-4">
+            <Link
+              to="/"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              All Events
+            </Link>
+            <Link
+              to="/archived"
+              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                />
+              </svg>
+              Archived Events
+            </Link>
+          </div>
         </div>
 
         {/* Error Message */}

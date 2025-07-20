@@ -339,7 +339,10 @@ const EventList: React.FC<EventListProps> = ({
                         onChange={(e) =>
                           setEditFormData({
                             ...editFormData,
-                            category: e.target.value as any,
+                            category: e.target.value as
+                              | "Work"
+                              | "Personal"
+                              | "Other",
                           })
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
