@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import type { Event } from "../types/event";
 import { formatDate, formatTime, isPast } from "../utils/dateUtils";
 
@@ -13,9 +13,35 @@ const EventList: React.FC<EventListProps> = ({
   onArchive,
   onDelete,
 }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
+
   console.log("EventList received events:", events);
   console.log("Events length:", events.length);
   console.log("First event:", events[0]);
+
+  // Filter and search events
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      // Search term filter
+      const matchesSearch =
+        searchTerm === "" ||
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.notes &&
+          event.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      // Category filter
+      const matchesCategory =
+        categoryFilter === "all" || event.category === categoryFilter;
+
+      // Archived filter
+      const matchesArchived = showArchived ? true : !event.archived;
+
+      return matchesSearch && matchesCategory && matchesArchived;
+    });
+  }, [events, searchTerm, categoryFilter, showArchived]);
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "Work":
@@ -75,48 +101,133 @@ const EventList: React.FC<EventListProps> = ({
     }
   };
 
-  if (events.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="text-gray-400 mb-4">
-          <svg
-            className="mx-auto h-12 w-12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No events yet
-        </h3>
-        <p className="text-gray-500">
-          Create your first event using the form on the left.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
+      {/* Search and Filter Controls */}
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search Input */}
+          <div>
+            <label
+              htmlFor="search"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Search Events
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Search by title or notes..."
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Category
+            </label>
+            <select
+              id="category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Categories</option>
+              <option value="Work">Work</option>
+              <option value="Personal">Personal</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Archived Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Show Archived
+            </label>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="showArchived"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor="showArchived"
+                className="ml-2 text-sm text-gray-700"
+              >
+                Include archived events
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Results Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          Events ({events.length})
+          Events ({filteredEvents.length} of {events.length})
         </h2>
         <div className="text-sm text-gray-500">Sorted by date and time</div>
       </div>
 
+      {/* No Results Message */}
+      {filteredEvents.length === 0 && events.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="text-gray-400 mb-4">
+            <svg
+              className="mx-auto h-12 w-12"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No events found
+          </h3>
+          <p className="text-gray-500">
+            Try adjusting your search terms or filters.
+          </p>
+        </div>
+      )}
+
+      {/* Events List */}
       <div className="space-y-4">
-        {events.map((event) => {
+        {filteredEvents.map((events) => {
+          const event = events?.data;
           console.log("Event data:", event);
           // Check for both _id and id properties
-          const eventId = event.data._id || event.data.id;
+          const eventId = event._id || event.id;
           if (!event || !eventId) {
             console.log("Skipping event - missing id:", event);
             return null;
@@ -127,9 +238,9 @@ const EventList: React.FC<EventListProps> = ({
             <div
               key={safeEventId}
               className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
-                event.data.archived
+                event.archived
                   ? "border-gray-300 opacity-75"
-                  : isPast(event.data.date, event.data.time)
+                  : isPast(event.date, event.time)
                   ? "border-red-500 opacity-90"
                   : "border-blue-500"
               }`}
@@ -139,27 +250,25 @@ const EventList: React.FC<EventListProps> = ({
                   <div className="flex items-center space-x-3 mb-2">
                     <h3
                       className={`text-lg font-semibold text-gray-900 ${
-                        event.data.archived ? "line-through" : ""
+                        event.archived ? "line-through" : ""
                       } ${
-                        !event.data.archived &&
-                        isPast(event.data.date, event.data.time)
+                        !event.archived && isPast(event.date, event.time)
                           ? "text-red-600"
                           : ""
                       }`}
                     >
-                      {event.data.title}
+                      {event.title}
                     </h3>
-                    {event.data.archived && (
+                    {event.archived && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         Archived
                       </span>
                     )}
-                    {!event.data.archived &&
-                      isPast(event.data.date, event.data.time) && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Past Event
-                        </span>
-                      )}
+                    {!event.archived && isPast(event.date, event.time) && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Past Event
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
@@ -177,7 +286,7 @@ const EventList: React.FC<EventListProps> = ({
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      <span>{formatDate(event.data.date)}</span>
+                      <span>{formatDate(event.date)}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <svg
@@ -193,14 +302,14 @@ const EventList: React.FC<EventListProps> = ({
                           d="12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>{formatTime(event.data.time)}</span>
+                      <span>{formatTime(event.time)}</span>
                     </div>
                   </div>
 
-                  {event.data.notes && (
+                  {event.notes && (
                     <div className="mb-3">
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
-                        {event.data.notes}
+                        {event.notes}
                       </p>
                     </div>
                   )}
@@ -208,11 +317,11 @@ const EventList: React.FC<EventListProps> = ({
                   <div className="flex items-center space-x-2">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(
-                        event.data.category
+                        event.category
                       )}`}
                     >
-                      {getCategoryIcon(event.data.category)}
-                      <span className="ml-1">{event.data.category}</span>
+                      {getCategoryIcon(event.category)}
+                      <span className="ml-1">{event.category}</span>
                     </span>
                   </div>
                 </div>
@@ -221,7 +330,7 @@ const EventList: React.FC<EventListProps> = ({
                   <button
                     onClick={() => onArchive(safeEventId)}
                     className={`p-2 rounded-md transition-colors duration-200 ${
-                      event.data.archived
+                      event.archived
                         ? "text-green-600 hover:bg-green-50"
                         : "text-gray-600 hover:bg-gray-50"
                     }`}

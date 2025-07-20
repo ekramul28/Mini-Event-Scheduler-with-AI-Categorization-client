@@ -41,6 +41,58 @@ export const eventApi = {
     return response.json();
   },
 
+  // Search events
+  /**
+   * Search events by title, notes, or other criteria
+   * @param searchTerm The search term to look for
+   * @param category Optional category filter
+   * @param includeArchived Whether to include archived events
+   * @returns An object with meta and result (array of events)
+   */
+  searchEvents: async (params: {
+    searchTerm?: string;
+    category?: string;
+    includeArchived?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    meta: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      totalPage: number;
+    };
+    result: Event[];
+  }> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.searchTerm) {
+      searchParams.append("searchTerm", params.searchTerm);
+    }
+    if (params.category && params.category !== "all") {
+      searchParams.append("category", params.category);
+    }
+    if (params.includeArchived !== undefined) {
+      searchParams.append("includeArchived", params.includeArchived.toString());
+    }
+    if (params.page) {
+      searchParams.append("page", params.page.toString());
+    }
+    if (params.limit) {
+      searchParams.append("limit", params.limit.toString());
+    }
+
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    const response = await fetch(`${API_BASE_URL}/events${query}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to search events");
+    }
+
+    return response.json();
+  },
+
   // Create a new event
   createEvent: async (eventData: CreateEventData): Promise<Event> => {
     const response = await fetch(`${API_BASE_URL}/events`, {

@@ -19,9 +19,13 @@ const EventScheduler: React.FC = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const fetchedEvents = await eventApi.getAllEvents();
-      console.log("Fetched events from API:", fetchedEvents);
-      console.log("First event structure:", fetchedEvents[0]);
+      const response = await eventApi.getAllEvents();
+      console.log("Fetched events from API:", response);
+      console.log("First event structure:", response.result[0]);
+
+      // Extract events from the response structure { meta, result: Event[] }
+      const fetchedEvents = response.result;
+
       // Sort events by date and time (ascending)
       const sortedEvents = fetchedEvents.sort((a, b) => {
         try {
