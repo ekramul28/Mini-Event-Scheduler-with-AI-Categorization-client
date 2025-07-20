@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import type { Event, CreateEventData } from "../types/event";
 import { eventApi } from "../services/api";
-import EventForm from "./EventForm";
+
 import EventList from "./EventList";
+import EventForm from "./EventForm";
 
 const EventScheduler: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -20,8 +21,8 @@ const EventScheduler: React.FC = () => {
       const fetchedEvents = await eventApi.getAllEvents();
       // Sort events by date and time (ascending)
       const sortedEvents = fetchedEvents.sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
+        const dateA = new Date(`${a.date || ""}T${a.time || ""}`);
+        const dateB = new Date(`${b.date || ""}T${b.time || ""}`);
         return dateA.getTime() - dateB.getTime();
       });
       setEvents(sortedEvents);
@@ -39,8 +40,8 @@ const EventScheduler: React.FC = () => {
       const newEvent = await eventApi.createEvent(eventData);
       setEvents((prev) =>
         [...prev, newEvent].sort((a, b) => {
-          const dateA = new Date(`${a.date}T${a.time}`);
-          const dateB = new Date(`${b.date}T${b.time}`);
+          const dateA = new Date(`${a.date || ""}T${a.time || ""}`);
+          const dateB = new Date(`${b.date || ""}T${b.time || ""}`);
           return dateA.getTime() - dateB.getTime();
         })
       );
