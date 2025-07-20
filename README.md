@@ -16,6 +16,7 @@ A modern, responsive event scheduling application built with React, TypeScript, 
 - **Frontend**: React 19, TypeScript, Tailwind CSS
 - **Routing**: React Router DOM
 - **Build Tool**: Vite
+- **Date Handling**: date-fns
 - **Backend API**: Express.js (separate backend required)
 
 ## Getting Started
@@ -95,6 +96,8 @@ src/
 │   └── api.ts               # API service functions
 ├── types/
 │   └── event.ts             # TypeScript type definitions
+├── utils/
+│   └── dateUtils.ts         # Date formatting utilities using date-fns
 ├── routers/
 │   └── routes.tsx           # Application routing
 └── App.tsx                  # Root component
@@ -122,6 +125,14 @@ src/
 - Error boundaries for React errors
 - API error handling with user-friendly messages
 - Graceful handling of missing or invalid data
+
+### Date & Time Features
+
+- Smart date formatting (Today, Tomorrow, Yesterday, or full date)
+- 12-hour time format with AM/PM
+- Past event detection with visual indicators
+- Relative time descriptions
+- Robust date parsing and validation using date-fns
 
 ## Contributing
 
